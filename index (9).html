@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ReadStart — Learn to Read, Step by Step</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg: #FFFFFF;
+    --surface: #F8F7F4;
+    --surface-2: #F0EFEA;
+    --line: #DEDBD2;
+    --chalk: #21201D;
+    --chalk-dim: #6E6B62;
+    --amber: #2F5233;
+    --amber-dim: #CFE0CF;
+    --moss: #B8892B;
+    --moss-dim: #F6ECD9;
+    --rust: #B3413B;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  html{ scroll-padding-top: env(safe-area-inset-top, 0px); }
+  *{ box-sizing: border-box; }
+  html, body{ height: 100%; }
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--chalk);
+    font-family: 'Lexend', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,h2,h3, .display{
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  .wrap{ max-width: 720px; margin: 0 auto; padding: 20px 18px 60px; }
+  header.top{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 18px 18px 10px; position: sticky; top: 0;
+    background: linear-gradient(var(--bg) 80%, transparent);
+    z-index: 5;
+  }
+  .brand{ display:flex; align-items:baseline; gap:10px; }
+  .brand .mark{ color: var(--amber); font-size: 1.5rem; }
+  .brand h1{ font-size: 1.25rem; }
+  .brand .tag{ color: var(--chalk-dim); font-size: 0.78rem; }
+  .overall{ text-align:right; font-size: 0.78rem; color: var(--chalk-dim); }
+  .overall b{ color: var(--amber); font-family:'Space Grotesk'; font-size:0.95rem; }
+
+  /* ---- Path view ---- */
+  .path-intro{ color: var(--chalk-dim); font-size: 0.95rem; line-height:1.6; margin: 4px 0 28px; max-width: 54ch; }
+  .path-intro strong{ color: var(--chalk); }
+  .route{ position: relative; padding: 10px 0 20px; }
+  .node{
+    position: relative; display:flex; align-items:center; gap:16px;
+    padding: 14px 16px; margin-bottom: 8px; border-radius: 14px;
+    border: 1px solid var(--line); background: var(--surface);
+    cursor: pointer; transition: transform .15s ease, border-color .15s ease;
+  }
+  .node:hover{ transform: translateX(4px); border-color: var(--amber-dim); }
+  .node.locked{ opacity: 0.45; cursor: not-allowed; }
+  .node.locked:hover{ transform:none; border-color: var(--line); }
+  .node.done{ border-color: var(--moss); }
+  .peg{
+    flex: 0 0 auto; width: 44px; height: 44px; border-radius: 50%;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Space Grotesk'; font-weight:700; font-size:1rem;
+    background: var(--surface-2); color: var(--chalk-dim); border: 2px solid var(--line);
+  }
+  .node.current .peg{ background: var(--amber); color: #FFFFFF; border-color: var(--amber); }
+  .node.done .peg{ background: var(--moss); color: #2A1F05; border-color: var(--moss); }
+  .node .info{ flex:1; min-width:0; }
+  .node .info .lvl-title{ font-family:'Space Grotesk'; font-size: 0.98rem; }
+  .node .info .lvl-sub{ font-size: 0.8rem; color: var(--chalk-dim); margin-top:2px; }
+  .node .status{ font-size: 0.72rem; color: var(--chalk-dim); flex: 0 0 auto; text-align:right; }
+  .node.done .status{ color: var(--moss); }
+  .connector{ width: 2px; height: 14px; background: var(--line); margin-left: 38px; }
+
+  /* ---- Lesson view ---- */
+  .lesson-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom: 6px;}
+  .back-btn{
+    background:none; border:1px solid var(--line); color: var(--chalk-dim);
+    padding: 7px 12px; border-radius: 999px; font-family:'Lexend'; font-size:0.8rem; cursor:pointer;
+  }
+  .back-btn:hover{ border-color: var(--amber); color: var(--amber); }
+  .lesson-head h2{ font-size: 1.35rem; margin-top: 10px; }
+  .lesson-sub{ color: var(--chalk-dim); font-size: 0.88rem; margin-top: 2px; }
+
+  .coach-box{
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px 16px; margin: 16px 0 22px; font-size: 0.86rem; line-height:1.55; color: var(--chalk-dim);
+  }
+  .coach-box b{ color: var(--chalk); }
+
+  .drill-group{ margin-bottom: 28px; }
+  .drill-group h3{ font-size: 0.82rem; text-transform: none; color: var(--amber); margin-bottom: 10px; }
+  .tiles{ display:grid; grid-template-columns: repeat(auto-fill, minmax(128px,1fr)); gap: 10px; }
+  .tile{
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+    padding: 12px 10px 10px; display:flex; flex-direction:column; align-items:center; gap:8px;
+  }
+  .tile.mastered{ border-color: var(--moss); background: var(--moss-dim); }
+  .tile .word{ font-family:'Space Grotesk'; font-size: 1.05rem; letter-spacing: 0.01em; }
+  .tile .word .chunk-dot{ color: var(--amber); padding: 0 1px; }
+  .tile .dots{ display:flex; gap:5px; }
+  .dot{ width:7px; height:7px; border-radius:50%; background: var(--line); }
+  .dot.hit{ background: var(--moss); }
+  .dot.miss{ background: var(--rust); }
+  .tile .controls{ display:flex; gap:6px; margin-top:2px; }
+  .icon-btn{
+    width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--surface-2); color: var(--chalk); font-size: 0.85rem;
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .icon-btn:hover{ border-color: var(--amber); }
+  .icon-btn.say:hover{ border-color: var(--amber); color: var(--amber); }
+  .icon-btn.yes:hover{ border-color: var(--moss); color: var(--moss); }
+  .icon-btn.no:hover{ border-color: var(--rust); color: var(--rust); }
+
+  .passage-card{
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    padding: 20px; margin-bottom: 18px;
+  }
+  .passage-card p{ font-size: 1.15rem; line-height: 2; font-family:'Lexend'; }
+  .passage-card .plabel{ font-size: 0.78rem; color: var(--chalk-dim); margin-bottom: 10px; }
+  .passage-foot{ display:flex; align-items:center; justify-content:space-between; margin-top: 14px; }
+
+  .level-done-banner{
+    background: var(--moss-dim); border: 1px solid var(--moss); border-radius: 12px;
+    padding: 14px 16px; margin: 20px 0; font-size: 0.9rem; display:flex; align-items:center; justify-content:space-between; gap:10px;
+  }
+  .level-done-banner button{
+    background: var(--moss); color: #2A1F05; border:none; border-radius: 8px; padding: 8px 14px;
+    font-family:'Space Grotesk'; font-weight:600; cursor:pointer; font-size: 0.85rem;
+  }
+
+  .tabs{ display:flex; gap:8px; padding: 0 18px 6px; }
+  .tab-btn{
+    background: none; border: 1px solid var(--line); color: var(--chalk-dim);
+    padding: 7px 16px; border-radius: 999px; font-family:'Space Grotesk'; font-size: 0.82rem; cursor:pointer;
+  }
+  .tab-btn.active{ background: var(--amber); border-color: var(--amber); color: #FFFFFF; }
+  .tab-btn:not(.active):hover{ border-color: var(--amber-dim); color: var(--chalk); }
+
+  .lib-intro{ color: var(--chalk-dim); font-size: 0.95rem; line-height:1.6; margin: 4px 0 24px; max-width: 54ch; }
+  .lib-intro strong{ color: var(--chalk); }
+  .shelf{ display:grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: 14px; }
+  .book{
+    border-radius: 10px; border: 1px solid var(--line); background: linear-gradient(160deg, var(--surface), var(--surface-2));
+    padding: 16px 14px; cursor:pointer; min-height: 150px; display:flex; flex-direction:column; justify-content:space-between;
+    border-left: 6px solid var(--amber); transition: transform .15s ease;
+  }
+  .book:hover{ transform: translateY(-3px); }
+  .book.locked{ opacity: 0.4; cursor: not-allowed; border-left-color: var(--line); }
+  .book.locked:hover{ transform:none; }
+  .book .btitle{ font-family:'Space Grotesk'; font-size: 1rem; line-height:1.3; }
+  .book .bblurb{ font-size: 0.76rem; color: var(--chalk-dim); margin-top: 8px; line-height:1.4; }
+  .book .blevel{ font-size: 0.7rem; color: var(--amber); margin-top: 12px; }
+  .book.locked .blevel{ color: var(--chalk-dim); }
+  .reader{ background: var(--surface); border:1px solid var(--line); border-radius:14px; padding: 22px; }
+  .reader p{ font-size: 1.15rem; line-height: 2; }
+  .reader .rtitle{ margin-bottom: 6px; }
+  .reader .rmeta{ color: var(--chalk-dim); font-size: 0.8rem; margin-bottom: 16px; }
+
+  footer{ text-align:center; padding: 30px 18px 10px; color: var(--chalk-dim); font-size: 0.76rem; }
+  footer button{
+    background:none; border: 1px solid var(--line); color: var(--chalk-dim); border-radius: 999px;
+    padding: 6px 14px; font-size: 0.76rem; cursor:pointer; margin-top: 8px;
+  }
+  footer button:hover{ border-color: var(--rust); color: var(--rust); }
+
+  /* ---- Auth + placement ---- */
+  .auth-wrap{ max-width: 380px; margin: 60px auto; padding: 0 18px; }
+  .auth-card{ background: var(--surface); border:1px solid var(--line); border-radius: 16px; padding: 28px 24px; }
+  .auth-card h2{ font-size: 1.3rem; margin-bottom: 4px; }
+  .auth-card .sub{ color: var(--chalk-dim); font-size: 0.85rem; margin-bottom: 20px; }
+  .auth-card label{ display:block; font-size: 0.78rem; color: var(--chalk-dim); margin: 12px 0 6px; }
+  .auth-card input{
+    width:100%; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px;
+    padding: 10px 12px; color: var(--chalk); font-family:'Lexend'; font-size: 0.95rem;
+  }
+  .auth-card input:focus{ outline: none; border-color: var(--amber); }
+  .auth-btn{
+    width:100%; margin-top: 20px; background: var(--amber); color: #FFFFFF; border:none;
+    border-radius: 8px; padding: 11px; font-family:'Space Grotesk'; font-weight:600; font-size: 0.92rem; cursor:pointer;
+  }
+  .auth-switch{ text-align:center; margin-top: 14px; font-size: 0.82rem; color: var(--chalk-dim); }
+  .auth-switch a{ color: var(--amber); cursor:pointer; text-decoration: underline; }
+  .auth-msg{ font-size: 0.82rem; margin-top: 12px; padding: 8px 10px; border-radius: 8px; }
+  .auth-msg.err{ background: rgba(179,65,59,0.10); color: var(--rust); }
+  .auth-msg.ok{ background: rgba(184,137,43,0.14); color: #8a6a1f; }
+
+  .user-pill{ display:flex; align-items:center; gap:8px; font-size: 0.78rem; color: var(--chalk-dim); }
+  .user-pill button{
+    background:none; border: 1px solid var(--line); color: var(--chalk-dim); border-radius: 999px;
+    padding: 4px 10px; font-size: 0.72rem; cursor:pointer;
+  }
+  .placement-skip{ text-align:center; margin-top: 18px; }
+  .placement-skip a{ color: var(--chalk-dim); font-size: 0.8rem; text-decoration: underline; cursor:pointer; }
+
+  @media (max-width: 420px){
+    .tiles{ grid-template-columns: repeat(auto-fill, minmax(108px,1fr)); }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <span class="mark">◆</span>
+    <div>
+      <h1>ReadStart</h1>
+      <div class="tag">Learn to read, step by step</div>
+    </div>
+  </div>
+  <div class="overall" id="overallStat"></div>
+  <div class="user-pill" id="userPill" style="display:none;"></div>
+</header>
+
+<div class="wrap" id="app"></div>
+
+<footer style="display:none;">
+  Progress saves automatically to your account.
+  <br>
+  <button id="resetBtn">Reset all progress</button>
+</footer>
+
+<script>
+/* ================= CONTENT ================= */
+// All word lists below are original, written for this program.
+const LEVELS = [
+  {
+    key: "a-bdgmst", title: "Short A", sub: "sounds: b · d · g · m · s · t",
+    intro: "Sound out each block slowly, then blend it together. There's no rush — every correct read counts.",
+    nonsense: ["bab","bam","bas","dab","dag","dat","gad","gam","gat","mab","mag","mas","sab","tad","tam","tas"],
+    real: ["bad","bag","bat","dad","dam","gas","mad","mat","sad","sag","sat","tag","tab","gab"]
+  },
+  {
+    key: "digraphs", title: "Consonant Teams", sub: "sh · ch · th · wh · ck",
+    intro: "Two letters, one new sound. Point under each team before saying it.",
+    nonsense: ["shab","chid","thog","whun","dack","shob","chub","thab","shig","chok","thun","wheg","mick","shup"],
+    real: ["shed","chip","that","when","duck","shop","chin","thin","whip","rock","sock","chat","shin","wish"]
+  },
+  {
+    key: "blends", title: "Blends", sub: "bl · st · tr · fl · cr · sp",
+    intro: "Say both letters fast — they hug together, they don't split.",
+    nonsense: ["blad","stig","trob","flun","crol","spem","blun","stad","trig","flob","crim","spob","bleg","trup"],
+    real: ["black","step","trap","flag","crab","spin","blob","stop","trip","flat","crib","spot","blend","trick"]
+  },
+  {
+    key: "silent-e", title: "Silent E", sub: "a_e · i_e · o_e · u_e",
+    intro: "The e at the end is quiet — but it makes the middle vowel say its own name.",
+    nonsense: ["blame","strine","glope","plune","shabe","crite","stobe","flune","grabe","snipe","thobe","clune"],
+    real: ["cake","time","hope","cute","made","ride","note","tune","plane","smile","stove","flute","shape","white"]
+  },
+  {
+    key: "vowel-r", title: "Vowel + R", sub: "ar · er · ir · or · ur",
+    intro: "When a vowel sits next to r, it changes sound completely — practice these as their own family.",
+    nonsense: ["starn","ferl","birm","forn","curd","blarn","therl","shirn","sworn","chorm","furl","garv"],
+    real: ["car","farm","her","term","bird","girl","for","corn","fur","curl","start","germ","first","storm"]
+  },
+  {
+    key: "teams", title: "Vowel Teams", sub: "ai · ee · oa · ay · oo · ou · oi",
+    intro: "These vowel pairs travel together and make one sound. Learn the pair as a single unit.",
+    nonsense: ["blain","freet","gloat","stray","snoot","clound","proin","threen","gaink","meel","doak","spoy"],
+    real: ["rain","tree","boat","play","moon","cloud","coin","seed","road","stay","food","shout","soil","team"]
+  },
+  {
+    key: "chunking", title: "Splitting Long Words", sub: "the ReadStart chunk method",
+    intro: "Longer words feel scary because they look long — not because they're hard. Find the vowels, put a dot after each one, and read one chunk at a time.",
+    chunkWords: [
+      {w:"napkin", c:["nap","kin"]}, {w:"picnic", c:["pic","nic"]}, {w:"magnet", c:["mag","net"]},
+      {w:"sunset", c:["sun","set"]}, {w:"velvet", c:["vel","vet"]}, {w:"cactus", c:["cac","tus"]},
+      {w:"rabbit", c:["rab","bit"]}, {w:"basket", c:["bas","ket"]}, {w:"muffin", c:["muf","fin"]},
+      {w:"catnip", c:["cat","nip"]}, {w:"tennis", c:["ten","nis"]}, {w:"cobweb", c:["cob","web"]}
+    ]
+  },
+  {
+    key: "multisyllable", title: "Long Word Bank", sub: "applying the chunk method",
+    intro: "Same job as last time — find the vowels, chunk it, read piece by piece, then say the whole word.",
+    chunkWords: [
+      {w:"contest", c:["con","test"]}, {w:"object", c:["ob","ject"]}, {w:"absent", c:["ab","sent"]},
+      {w:"dentist", c:["den","tist"]}, {w:"publish", c:["pub","lish"]}, {w:"sudden", c:["sud","den"]},
+      {w:"mitten", c:["mit","ten"]}, {w:"invent", c:["in","vent"]}, {w:"insect", c:["in","sect"]},
+      {w:"pumpkin", c:["pump","kin"]}, {w:"problem", c:["prob","lem"]}, {w:"organism", c:["or","gan","ism"]},
+      {w:"fantastic", c:["fan","tas","tic"]}, {w:"understand", c:["un","der","stand"]}
+    ]
+  },
+  {
+    key: "endings", title: "Word Endings", sub: "un· / re· + ·ing / ·ed / ·er / ·est",
+    intro: "Read the base word first, then add the ending piece on. Same chunk skill, new job.",
+    chunkWords: [
+      {w:"unpack", c:["un","pack"]}, {w:"untold", c:["un","told"]}, {w:"replay", c:["re","play"]},
+      {w:"resend", c:["re","send"]}, {w:"jumping", c:["jump","ing"]}, {w:"jumped", c:["jump","ed"]},
+      {w:"faster", c:["fast","er"]}, {w:"fastest", c:["fast","est"]}, {w:"helper", c:["help","er"]},
+      {w:"landing", c:["land","ing"]}, {w:"landed", c:["land","ed"]}, {w:"undo", c:["un","do"]},
+      {w:"refill", c:["re","fill"]}, {w:"coldest", c:["cold","est"]}
+    ]
+  },
+  {
+    key: "passages", title: "Putting It Together", sub: "reading full sentences",
+    intro: "Every word in these passages uses sounds you've already mastered. Read at a steady pace — this is where it all clicks.",
+    passages: [
+      "The rabbit ran past the basket and stopped at the fence. It looked back, then jumped into the tall grass by the pond.",
+      "Sam packed a muffin and a magnet for the picnic. On the way, he saw a cobweb strung between two branches near the barn.",
+      "It was sudden and unexpected — the storm rolled in fast. We stayed inside, played cards, and listened to the rain on the roof."
+    ]
+  }
+];
+
+const LIBRARY = [
+  {
+    id: "sams-big-bag", title: "Sam's Big Bag", requires: 0,
+    blurb: "Short vowel A, single sounds — the very first story you can read.",
+    text: "Sam has a bag. The bag is big. Sam has a bat. Dad has a bag too. Sam and Dad sat on the mat."
+  },
+  {
+    id: "duck-and-shed", title: "The Duck and the Shed", requires: 1,
+    blurb: "Adds consonant teams — sh, ch, th, ck.",
+    text: "A duck ran to the shed. The shed was shut. Chip the dog sat and had a chat with the duck. Then they had a snack and went back."
+  },
+  {
+    id: "kite-by-lake", title: "The Kite by the Lake", requires: 3,
+    blurb: "Adds blends and the silent-e pattern.",
+    text: "Grace flew a kite by the lake. The wind blew fast, and the kite made a big smile in the sky. She held the string tight and did not let it slip."
+  },
+  {
+    id: "storm-over-farm", title: "Storm Over the Farm", requires: 6,
+    blurb: "Adds vowel + r and vowel teams.",
+    text: "Dark clouds rolled over the farm. Birds flew low, and the corn swayed in the wind. Mia ran to the barn before the rain came down. She stayed dry and watched the storm from the door."
+  },
+  {
+    id: "unexpected-picnic", title: "The Unexpected Picnic", requires: 9,
+    blurb: "Full multisyllable words and word endings — everything you've learned.",
+    text: "The picnic was almost forgotten until Grandpa unpacked an old basket from the closet. Inside was a napkin, a magnet shaped like a rabbit, and a faded photograph. It was the fastest anyone had ever packed a car. By sunset, they were laughing in the grass, replaying stories from years before."
+  }
+];
+
+/* ================= SUPABASE ================= */
+const SUPABASE_URL = "https://mbknaixzqowojmrfddwp.supabase.co";
+const SUPABASE_KEY = "sb_publishable_a5BdOvpMLz49UWNjCYB5aQ_neXcE11l";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ================= STATE ================= */
+const STORE_KEY = "foothold-progress-v1"; // local cache only, cloud is source of truth
+let state = {};
+let placementDone = false;
+let currentUser = null;
+let saveTimer = null;
+
+function loadLocalCache(){
+  try{ return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }catch(e){ return {}; }
+}
+function saveState(s){
+  state = s;
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(s)); }catch(e){}
+  // Debounce cloud writes slightly so rapid taps don't fire a request each time.
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=>{
+    if(!currentUser) return;
+    sb.from('app_data').upsert({
+      user_id: currentUser.id,
+      data: state,
+      placement_done: placementDone,
+      updated_at: new Date().toISOString()
+    }).then(({error})=>{ if(error) console.error('save failed', error); });
+  }, 400);
+}
+
+function itemsOf(level){
+  if(level.passages) return level.passages.map((p,i)=>({id:"p"+i, display:p, isPassage:true}));
+  if(level.chunkWords) return level.chunkWords.map(o=>({id:o.w, display:o.w, chunks:o.c}));
+  return [
+    ...level.nonsense.map(w=>({id:"n_"+w, display:w})),
+    ...level.real.map(w=>({id:"r_"+w, display:w})),
+  ];
+}
+function getItemState(levelKey, itemId){
+  state[levelKey] = state[levelKey] || {};
+  state[levelKey][itemId] = state[levelKey][itemId] || {streak:0, misses:0, mastered:false};
+  return state[levelKey][itemId];
+}
+function levelMastered(level){
+  const items = itemsOf(level);
+  return items.length>0 && items.every(it => getItemState(level.key, it.id).mastered);
+}
+function levelUnlocked(idx){
+  if(idx===0) return true;
+  return levelMastered(LEVELS[idx-1]);
+}
+
+/* ================= AUDIO ================= */
+function say(text){
+  try{
+    const clean = text.replace(/[·-]/g,"");
+    const u = new SpeechSynthesisUtterance(clean);
+    u.rate = 0.85;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+
+/* ================= RENDER ================= */
+const app = document.getElementById("app");
+let currentLevelIdx = null;
+
+function renderOverall(){
+  const total = LEVELS.length;
+  const done = LEVELS.filter(levelMastered).length;
+  document.getElementById("overallStat").innerHTML = `<b>${done} / ${total}</b><br>levels mastered`;
+}
+
+function tabsHTML(active){
+  return `<div class="tabs">
+    <button class="tab-btn ${active==='path'?'active':''}" onclick="renderPath()">Route</button>
+    <button class="tab-btn ${active==='library'?'active':''}" onclick="renderLibrary()">Library</button>
+  </div>`;
+}
+
+function renderPath(){
+  currentLevelIdx = null;
+  renderOverall();
+  let html = tabsHTML('path');
+  html += `<div class="path-intro">ReadStart breaks reading into the smallest possible steps. Each level unlocks once every item in it has been read correctly <strong>three times in a row</strong>. Ten to fifteen minutes a day is plenty.</div>`;
+  html += `<div class="route">`;
+  LEVELS.forEach((lvl, i)=>{
+    const unlocked = levelUnlocked(i);
+    const done = unlocked && levelMastered(lvl);
+    const cls = !unlocked ? "locked" : done ? "done" : "current";
+    const status = !unlocked ? "Locked" : done ? "Mastered" : "In progress";
+    html += `<div class="node ${cls}" ${unlocked?`onclick="openLevel(${i})"`:""}>
+      <div class="peg">${done?"✓":i+1}</div>
+      <div class="info">
+        <div class="lvl-title">${lvl.title}</div>
+        <div class="lvl-sub">${lvl.sub}</div>
+      </div>
+      <div class="status">${status}</div>
+    </div>`;
+    if(i < LEVELS.length-1) html += `<div class="connector"></div>`;
+  });
+  html += `</div>`;
+  app.innerHTML = html;
+}
+
+function tileHTML(level, item){
+  const st = getItemState(level.key, item.id);
+  const dots = [0,1,2].map(i=>{
+    let cls = "dot";
+    if(i < st.streak) cls += " hit";
+    return `<span class="${cls}"></span>`;
+  }).join("");
+  const displayWord = item.chunks ? item.chunks.join('<span class="chunk-dot">·</span>') : item.display;
+  return `<div class="tile ${st.mastered?"mastered":""}" id="tile_${item.id}">
+    <div class="word">${displayWord}</div>
+    <div class="dots">${dots}</div>
+    <div class="controls">
+      <button class="icon-btn say" title="Hear it" onclick="say('${item.display.replace(/'/g,"")}')">🔊</button>
+      <button class="icon-btn yes" title="Read correctly" onclick="mark('${level.key}','${item.id}',true)">✓</button>
+      <button class="icon-btn no" title="Missed it" onclick="mark('${level.key}','${item.id}',false)">✕</button>
+    </div>
+  </div>`;
+}
+
+function renderLibrary(){
+  currentLevelIdx = null;
+  renderOverall();
+  let html = tabsHTML('library');
+  html += `<div class="lib-intro">Free stories, no card needed. Each one unlocks the moment you've mastered the sounds it's built from — so everything here is always readable, never a guess.</div>`;
+  html += `<div class="shelf">`;
+  LIBRARY.forEach(book=>{
+    const isUnlocked = levelMastered(LEVELS[book.requires]);
+    html += `<div class="book ${isUnlocked?'':'locked'}" ${isUnlocked?`onclick="openBook('${book.id}')"`:''}>
+      <div>
+        <div class="btitle">${book.title}</div>
+        <div class="bblurb">${book.blurb}</div>
+      </div>
+      <div class="blevel">${isUnlocked ? 'Ready to read' : 'Unlocks with "'+LEVELS[book.requires].title+'"'}</div>
+    </div>`;
+  });
+  html += `</div>`;
+  app.innerHTML = html;
+}
+
+function openBook(id){
+  const book = LIBRARY.find(b=>b.id===id);
+  if(!book) return;
+  let html = `<div class="lesson-head"><button class="back-btn" onclick="renderLibrary()">← back to library</button></div>`;
+  html += `<div class="reader">
+    <h2 class="rtitle">${book.title}</h2>
+    <div class="rmeta">${book.blurb}</div>
+    <p>${book.text}</p>
+    <button class="icon-btn say" style="margin-top:10px;" onclick="say('${book.text.replace(/'/g,"")}')">🔊 Read aloud</button>
+  </div>`;
+  app.innerHTML = html;
+}
+
+function openLevel(idx){
+  currentLevelIdx = idx;
+  const level = LEVELS[idx];
+  let html = `<div class="lesson-head">
+      <button class="back-btn" onclick="renderPath()">← back to route</button>
+    </div>
+    <h2>${level.title}</h2>
+    <div class="lesson-sub">${level.sub}</div>
+    <div class="coach-box"><b>How to run this:</b> ${level.intro}</div>`;
+
+  if(level.passages){
+    itemsOf(level).forEach((item, i)=>{
+      const st = getItemState(level.key, item.id);
+      const dots = [0,1,2].map(j=>`<span class="dot ${j<st.streak?'hit':''}"></span>`).join("");
+      html += `<div class="passage-card">
+        <div class="plabel">Passage ${i+1}${st.mastered?" — mastered":""}</div>
+        <p>${item.display}</p>
+        <div class="passage-foot">
+          <div class="dots">${dots}</div>
+          <div class="controls">
+            <button class="icon-btn say" onclick="say('${item.display.replace(/'/g,"")}')">🔊</button>
+            <button class="icon-btn yes" onclick="mark('${level.key}','${item.id}',true)">✓</button>
+            <button class="icon-btn no" onclick="mark('${level.key}','${item.id}',false)">✕</button>
+          </div>
+        </div>
+      </div>`;
+    });
+  } else if(level.chunkWords){
+    html += `<div class="drill-group"><h3>Words</h3><div class="tiles">`;
+    itemsOf(level).forEach(item=> html += tileHTML(level, item));
+    html += `</div></div>`;
+  } else {
+    html += `<div class="drill-group"><h3>Sound drill (invented words — pure decoding)</h3><div class="tiles">`;
+    level.nonsense.forEach(w=> html += tileHTML(level, {id:"n_"+w, display:w}));
+    html += `</div></div>`;
+    html += `<div class="drill-group"><h3>Real words — same pattern</h3><div class="tiles">`;
+    level.real.forEach(w=> html += tileHTML(level, {id:"r_"+w, display:w}));
+    html += `</div></div>`;
+  }
+
+  if(levelMastered(level)){
+    const nextIdx = idx+1;
+    const hasNext = nextIdx < LEVELS.length;
+    html += `<div class="level-done-banner">
+      <span>🎉 Every item in this level has been read correctly three times in a row.</span>
+      ${hasNext ? `<button onclick="openLevel(${nextIdx})">Next level →</button>` : `<span>That's the whole route!</span>`}
+    </div>`;
+  }
+
+  app.innerHTML = html;
+  renderOverall();
+}
+
+function mark(levelKey, itemId, correct){
+  const st = getItemState(levelKey, itemId);
+  if(correct){
+    st.streak = Math.min(3, st.streak+1);
+    if(st.streak>=3) st.mastered = true;
+  } else {
+    st.streak = 0;
+    st.misses += 1;
+    st.mastered = false;
+  }
+  saveState(state);
+  if(currentLevelIdx!==null) openLevel(currentLevelIdx);
+}
+
+document.getElementById("resetBtn").addEventListener("click", ()=>{
+  if(confirm("This clears all your saved progress. Continue?")){
+    state = {};
+    placementDone = false;
+    saveState(state);
+    renderPath();
+  }
+});
+
+/* ================= AUTH ================= */
+let authMode = "signin"; // or "signup"
+let authMsg = "";
+
+function renderAuth(){
+  document.getElementById("userPill").style.display = "none";
+  document.getElementById("overallStat").innerHTML = "";
+  document.querySelector("footer").style.display = "none";
+  const isSignup = authMode === "signup";
+  document.getElementById("app").innerHTML = `
+    <div class="auth-wrap">
+      <div class="auth-card">
+        <h2>${isSignup ? "Create your account" : "Welcome back"}</h2>
+        <div class="sub">${isSignup ? "Free — just an email and password. No card, no trial." : "Log in to pick up where you left off."}</div>
+        <label>Email</label>
+        <input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com">
+        <label>Password</label>
+        <input id="authPass" type="password" autocomplete="${isSignup?'new-password':'current-password'}" placeholder="At least 6 characters">
+        ${authMsg ? `<div class="auth-msg ${authMsg.ok?'ok':'err'}">${authMsg.text}</div>` : ""}
+        <button class="auth-btn" id="authSubmit">${isSignup ? "Create account" : "Log in"}</button>
+        <div class="auth-switch">
+          ${isSignup ? `Already have an account? <a onclick="switchAuth('signin')">Log in</a>`
+                     : `New here? <a onclick="switchAuth('signup')">Create an account</a>`}
+        </div>
+      </div>
+    </div>`;
+  document.getElementById("authSubmit").addEventListener("click", submitAuth);
+}
+function switchAuth(mode){ authMode = mode; authMsg=""; renderAuth(); }
+
+async function submitAuth(){
+  const email = document.getElementById("authEmail").value.trim();
+  const password = document.getElementById("authPass").value;
+  if(!email || password.length < 6){
+    authMsg = {ok:false, text:"Enter a valid email and a password of at least 6 characters."};
+    renderAuth(); return;
+  }
+  const btn = document.getElementById("authSubmit");
+  btn.textContent = "One sec…"; btn.disabled = true;
+  let result;
+  if(authMode === "signup"){
+    result = await sb.auth.signUp({ email, password });
+  } else {
+    result = await sb.auth.signInWithPassword({ email, password });
+  }
+  if(result.error){
+    authMsg = {ok:false, text: result.error.message};
+    renderAuth();
+    return;
+  }
+  if(authMode === "signup" && result.data.user && !result.data.session){
+    authMsg = {ok:true, text:"Check your email to confirm your account, then log in."};
+    authMode = "signin";
+    renderAuth();
+    return;
+  }
+  await onLoggedIn(result.data.session.user);
+}
+
+async function onLoggedIn(user){
+  currentUser = user;
+  document.getElementById("userPill").style.display = "flex";
+  document.getElementById("userPill").innerHTML = `${user.email} <button onclick="signOut()">Log out</button>`;
+  document.querySelector("footer").style.display = "block";
+
+  const { data, error } = await sb.from('app_data').select('*').eq('user_id', user.id).maybeSingle();
+  if(error){ console.error(error); }
+
+  if(!data){
+    // brand new user — create their row, send them into placement
+    state = {};
+    placementDone = false;
+    await sb.from('app_data').insert({ user_id: user.id, data: {}, placement_done: false });
+    startPlacement();
+  } else if(!data.placement_done){
+    state = data.data || {};
+    placementDone = false;
+    startPlacement();
+  } else {
+    state = data.data || {};
+    placementDone = true;
+    renderPath();
+  }
+}
+
+async function signOut(){
+  await sb.auth.signOut();
+  currentUser = null;
+  state = {};
+  authMode = "signin"; authMsg="";
+  renderAuth();
+}
+
+/* ================= PLACEMENT TEST ================= */
+const PLACEMENT_LEVEL_COUNT = 9; // test levels 0-8; the fluency-passage level isn't sound-tested
+let placementIdx = 0;
+let placementResults = []; // per current level: {itemId, correct}
+
+function placementSampleFor(level){
+  if(level.chunkWords) return level.chunkWords.slice(0,3).map(o=>({id:o.w, display:o.w, chunks:o.c}));
+  const real = level.real && level.real.length ? level.real : level.nonsense;
+  return real.slice(0,3).map(w=>({id:"r_"+w, display:w}));
+}
+
+function startPlacement(){
+  placementIdx = 0;
+  placementResults = [];
+  renderPlacement();
+}
+
+function renderPlacement(){
+  document.getElementById("userPill").style.display = "flex";
+  document.querySelector("footer").style.display = "none";
+  if(placementIdx >= PLACEMENT_LEVEL_COUNT){
+    finishPlacement();
+    return;
+  }
+  const level = LEVELS[placementIdx];
+  const sample = placementSampleFor(level);
+  const answered = placementResults.length;
+  let html = `<div class="coach-box" style="margin-top:20px;"><b>Quick placement check.</b> Have the learner read each word below out loud, then mark it right or wrong. This finds exactly where to start — no wrong answers, just information.</div>`;
+  html += `<div class="lesson-sub" style="margin-bottom:10px;">Checking: ${level.title} (${placementIdx+1} of ${PLACEMENT_LEVEL_COUNT})</div>`;
+  html += `<div class="tiles">`;
+  sample.forEach((item, i)=>{
+    const done = placementResults[i];
+    const displayWord = item.chunks ? item.chunks.join('<span class="chunk-dot">·</span>') : item.display;
+    html += `<div class="tile ${done && done.correct ? 'mastered':''}">
+      <div class="word">${displayWord}</div>
+      <div class="controls">
+        <button class="icon-btn say" onclick="say('${item.display.replace(/'/g,"")}')">🔊</button>
+        <button class="icon-btn yes" onclick="placementMark(${i},true,'${item.id}')">✓</button>
+        <button class="icon-btn no" onclick="placementMark(${i},false,'${item.id}')">✕</button>
+      </div>
+    </div>`;
+  });
+  html += `</div>`;
+  if(placementResults.length === sample.length){
+    html += `<div class="level-done-banner"><span>Got it.</span><button onclick="advancePlacement()">Continue →</button></div>`;
+  }
+  html += `<div class="placement-skip"><a onclick="skipPlacement()">Skip the check — I'll pick a starting point myself</a></div>`;
+  document.getElementById("app").innerHTML = html;
+}
+
+function placementMark(i, correct, itemId){
+  placementResults[i] = {itemId, correct};
+  renderPlacement();
+}
+
+function advancePlacement(){
+  const level = LEVELS[placementIdx];
+  const correctCount = placementResults.filter(r=>r && r.correct).length;
+  if(correctCount >= 2){
+    // mastered — mark every real item in this level as mastered and keep going
+    itemsOf(level).forEach(item=>{
+      const st = getItemState(level.key, item.id);
+      st.streak = 3; st.mastered = true; st.misses = 0;
+    });
+    placementIdx += 1;
+    placementResults = [];
+    renderPlacement();
+  } else {
+    finishPlacement();
+  }
+}
+
+function skipPlacement(){ finishPlacement(); }
+
+function finishPlacement(){
+  placementDone = true;
+  saveState(state);
+  renderPath();
+}
+
+/* ================= INIT ================= */
+async function initApp(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(session && session.user){
+    await onLoggedIn(session.user);
+  } else {
+    renderAuth();
+  }
+}
+initApp();
+</script>
+</body>
+</html>
